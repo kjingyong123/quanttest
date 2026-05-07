@@ -1,0 +1,3 @@
+com\example\quanttest\QuanttestApplication.class
+com\example\quanttest\model\entities\Test.class
+com\example\quanttest\WebController.class

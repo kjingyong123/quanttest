@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Quanttest App</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <script type="text/javascript" th:src="@{/js/main.js}"></script>
+</head>
+<body class="container mt-5">
+    <div class="p-5 mb-4 bg-light rounded-3">
+        <h1 class="display-5 fw-bold" th:text="${message}">Hello!</h1>
+        <p class="col-md-8 fs-4">Your Spring Boot app is connected to SQL Server on port 8082.</p>
+    </div>
+</body>
+
+<div id="app">
+  <div id="hdr">
+    <button id="togSB" style="background:transparent;border:1px solid var(--border2);color:var(--muted);padding:4px 9px;border-radius:var(--r4);font-size:13px;flex-shrink:0" title="Toggle sidebar">◀</button>
+    <div style="display:flex;align-items:baseline;gap:8px;flex-shrink:0">
+      <div style="font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:800;color:var(--purple);letter-spacing:2px">◈ QBP</div>
+      <div style="font-size:var(--fs-xs);color:var(--dim);letter-spacing:1px;display:none" id="hdr-subtitle">QUANT BACKTEST PRO</div>
+    </div>
+    <div id="tbadge" style="display:none" class="tbadge"></div>
+    <div id="hbtns" style="display:none;margin-left:auto;gap:4px;align-items:center;flex-wrap:wrap">
+      <!-- Analysis group -->
+      <div class="nav-group">
+        <button class="nav-btn" id="bSig" title="Signal Chart">⚡ Signals</button>
+        <button class="nav-btn nav-btn--yellow" id="bTrend" title="Trend Analysis">📈 Trend</button>
+        <button class="nav-btn" id="bBrief" title="Trade Brief" style="--nc:#ffd166;--nb:#ffd16633">⚑ Brief</button>
+        <button class="nav-btn nav-btn--violet" id="bTips" title="Improve Win Rate">💡 Tips</button>
+      </div>
+      <div class="nav-sep"></div>
+      <!-- Backtest group -->
+      <div class="nav-group">
+        <button class="nav-btn nav-btn--purple" id="bRun" title="Run Backtest">▶ Backtest</button>
+        <button class="nav-btn" id="bCmp" title="Compare Strategies" style="--nc:var(--purple);--nb:#3a327044">⇌ Compare</button>
+      </div>
+      <div class="nav-sep"></div>
+      <!-- Market group -->
+      <div class="nav-group">
+        <button class="nav-btn" id="bSP500" title="S&P 500 Scanner" style="--nc:var(--text2);--nb:#1e1e2e">🏛 S&P 500</button>
+        <button class="nav-btn" id="bTC" title="Trade Center" style="--nc:var(--yellow);--nb:#ffd16633">⚔ Trades</button>
+        <button class="nav-btn" id="bRRG" title="Sector Rotation" style="--nc:var(--blue);--nb:#38bdf833">🔄 RRG</button>
+      </div>
+      <div class="nav-sep"></div>
+      <!-- Utility -->
+      <button class="nav-btn nav-btn--export" id="bExport" onclick="exportPDF()" title="Export to PDF">⬇ PDF</button>
+    </div>
+  </div>
+  <div id="body">
+    <div id="sb">
+      <span class="sl" style="margin-top:0">── API KEY</span>
+      <div id="apiSec">
+        <input type="password" id="apiIn" placeholder="Twelve Data API key..."/>
+        <a href="https://twelvedata.com/pricing" target="_blank" style="font-size:10px;display:block;margin:4px 0 8px">↗ Free key at twelvedata.com</a>
+      </div>
+      <div id="apiSet" style="display:none;margin-bottom:8px">
+        <span style="color:#00e5a0;font-size:11px">✓ Key set</span>
+        <button onclick="clearKey()" style="background:transparent;border:none;color:var(--muted);font-size:var(--fs-xs);margin-left:7px;font-family:inherit">change</button>
+      </div>
+      <span class="sl">── TICKER</span>
+      <div style="display:flex;gap:5px;margin-bottom:4px">
+        <input type="text" id="tickIn" placeholder="NVDA, SPY..." style="flex:1;font-size:12px"/>
+        <button id="bFetch" onclick="doFetch(false)" style="background:#7c6aff;color:#fff;border:none;padding:5px 9px;border-radius:3px;font-size:13px;min-width:30px" title="Load (use cache if available)">→</button>
+        <button id="bRefresh" onclick="doFetch(true)" style="background:transparent;border:1px solid #3a3270;color:#7c6aff;padding:5px 8px;border-radius:3px;font-size:11px;min-width:28px" title="Force re-fetch from API">↺</button>
+      </div>
+       <!-- INTERVAL SELECTOR -->
+      <div style="margin-bottom:5px">
+        <div style="display:flex;gap:3px;margin-bottom:4px;align-items:center;flex-wrap:wrap">
+          <span style="color:var(--muted);font-size:var(--fs-xs);flex-shrink:0;margin-right:2px">Interval:</span>
+          <button class="ivl-btn on" id="ivl-1day"   onclick="setIvl('1day')"  >Daily</button>
+          <button class="ivl-btn"   id="ivl-1week"   onclick="setIvl('1week')" >Weekly</button>
+          <button class="ivl-btn"   id="ivl-1month"  onclick="setIvl('1month')">Monthly</button>
+        </div>
+        <div style="display:flex;gap:3px;align-items:center">
+          <button id="bFetchAll" onclick="doFetchAll(false)" style="flex:1;background:transparent;border:1px solid #00e5a033;color:#00e5a0;padding:4px 6px;border-radius:3px;font-size:10px;font-family:inherit;letter-spacing:.5px;cursor:pointer" title="Load D+W+M from cache or API">⬇ All 3 (D+W+M)</button>
+          <button id="bRefreshAll" onclick="doFetchAll(true)" style="background:transparent;border:1px solid #3a3270;color:#7c6aff;padding:4px 7px;border-radius:3px;font-size:10px;min-width:28px;cursor:pointer;font-family:inherit" title="Force re-fetch all 3">↺</button>
+        </div>
+        <div id="fetchAllStatus" style="font-size:10px;color:var(--muted);margin-top:3px;line-height:1.6;display:none"></div>
+      </div>
+      <div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:6px">→ load cache  ·  ↺ re-fetch API  ·  now: <span id="ivl-current" style="color:#00e5a0">Daily</span></div>
+      <div id="ferr" style="color:#ff4466;font-size:11px;margin-bottom:6px;display:none;line-height:1.5"></div>
+      <div style="color:var(--muted);font-size:var(--fs-xs);letter-spacing:1.5px;font-weight:600;margin-bottom:5px">QUICK PICKS</div>
+      <div id="qpicks" style="margin-bottom:6px"></div>
+      <!-- DATA VAULT -->
+      <div id="cachePanel" style="margin-bottom:11px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
+          <span style="color:var(--muted);font-size:var(--fs-xs);letter-spacing:2px;font-weight:600">── DATA VAULT</span>
+          <div style="display:flex;align-items:center;gap:5px">
+            <span id="cacheCount" style="font-size:10px;color:var(--muted)"></span>
+            <button id="bClearCache" onclick="clearAllCache()" title="Clear all cached data" style="display:none;background:transparent;border:1px solid #ff446633;color:#ff4466;padding:1px 7px;border-radius:3px;font-size:10px;font-family:inherit;letter-spacing:1px;cursor:pointer" onmouseover="this.style.background='#ff446618'" onmouseout="this.style.background='transparent'">✕ CLEAR ALL</button>
+          </div>
+        </div>
+        <div id="cacheEmpty" style="background:#0d0d18;border:1px dashed #1e1e2e;border-radius:4px;padding:10px 10px;text-align:center;color:#2e2e48;font-size:10px;line-height:1.7">
+          No data loaded yet.<br>Enter a ticker and click →
+        </div>
+        <div id="cacheList"></div>
+      </div>
+
+      <span class="sl">── STRATEGIES</span>
+      <div style="display:flex;margin-bottom:6px;align-items:center;gap:4px">
+        <button class="cmb on" id="cAND" onclick="setCombo('AND')">AND</button>
+        <button class="cmb" id="cOR" onclick="setCombo('OR')">OR</button>
+        <span style="color:var(--muted);font-size:var(--fs-xs)" id="chint">all agree</span>
+      </div>
+      <div id="stratList"></div>
+
+      <span class="sl">── DIRECTION</span>
+      <div style="display:flex;gap:4px;margin-bottom:10px">
+        <button class="cmb on" id="dLong" onclick="setDir('long')" style="flex:1">LONG</button>
+        <button class="cmb" id="dShort" onclick="setDir('short')" style="flex:1">SHORT</button>
+        <button class="cmb" id="dBoth" onclick="setDir('both')" style="flex:1">BOTH</button>
+      </div>
+
+      <span class="sl">── RISK MANAGEMENT</span>
+
+      <!-- R:R Presets -->
+      <div style="font-size:var(--fs-xs);color:var(--muted);font-weight:600;letter-spacing:1.5px;margin-bottom:6px">R:R PRESET</div>
+      <div style="display:flex;gap:4px;margin-bottom:10px">
+        <button onclick="setRR(1,1.5)" id="rr-1.5" style="flex:1;padding:5px 4px;border-radius:4px;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:11px;letter-spacing:.5px;cursor:pointer;border:1px solid #1e1e2e;background:transparent;color:#5a547a;transition:all .15s" title="Risk 1 to gain 1.5">1 : 1.5</button>
+        <button onclick="setRR(1,1)" id="rr-1" style="flex:1;padding:5px 4px;border-radius:4px;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:11px;letter-spacing:.5px;cursor:pointer;border:1px solid #1e1e2e;background:transparent;color:#5a547a;transition:all .15s" title="Risk 1 to gain 1">1 : 1</button>
+        <button onclick="setRR(1,2)" id="rr-2" style="flex:1;padding:5px 4px;border-radius:4px;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:11px;letter-spacing:.5px;cursor:pointer;border:1px solid #1e1e2e;background:transparent;color:#5a547a;transition:all .15s" title="Risk 1 to gain 2">1 : 2</button>
+        <button onclick="setRR(1,3)" id="rr-3" style="flex:1;padding:5px 4px;border-radius:4px;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:11px;letter-spacing:.5px;cursor:pointer;border:1px solid #1e1e2e;background:transparent;color:#5a547a;transition:all .15s" title="Risk 1 to gain 3">1 : 3</button>
+      </div>
+
+      <!-- SL / TP inputs -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px">
+        <div>
+          <div style="font-size:var(--fs-xs);color:var(--muted);font-weight:600;margin-bottom:3px">STOP LOSS (%)</div>
+          <input type="number" id="slIn" value="5" min="0.5" max="50" step="0.5"/>
+        </div>
+        <div>
+          <div style="font-size:var(--fs-xs);color:var(--muted);font-weight:600;margin-bottom:3px">TAKE PROFIT (%)</div>
+          <input type="number" id="tpIn" value="10" min="1" max="200" step="1"/>
+        </div>
+      </div>
+
+      <!-- Live R:R display -->
+      <div id="rr-display" style="display:flex;align-items:center;justify-content:space-between;background:#0e0e1c;border:1px solid #1e1e2e;border-radius:4px;padding:5px 10px;margin-bottom:8px">
+        <span style="font-size:10px;color:#5a547a">Effective R:R</span>
+        <span id="rr-value" style="font-family:'Rajdhani',sans-serif;font-weight:800;font-size:14px;color:#ffd166">1 : 2.0</span>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+        <input type="checkbox" id="useTrail" style="accent-color:#7c6aff;cursor:pointer"/>
+        <label for="useTrail" style="font-size:11px;color:#8b85cc;cursor:pointer">Trailing Stop</label>
+      </div>
+      <div id="trailRow" style="display:none;margin-bottom:10px">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:2px">Trail % from peak</div>
+        <input type="number" id="trailIn" value="3" min="0.5" max="20" step="0.5"/>
+      </div>
+
+      <span class="sl">── CONFIG</span>
+      <div style="font-size:10px;color:var(--muted);margin-bottom:2px">Capital ($)</div>
+      <input type="number" id="capIn" value="100000" min="1000" style="margin-bottom:7px"/>
+      <div style="font-size:10px;color:var(--muted);margin-bottom:2px">Commission (%)</div>
+      <input type="number" id="commIn" value="0.1" min="0" max="1" step="0.01" style="margin-bottom:11px"/>
+
+      <span class="sl">── PARAMS</span>
+      <div id="paramAcc"></div>
+
+      <div id="qres" style="display:none">
+        <span class="sl" style="margin-top:2px">── LAST BACKTEST</span>
+        <div id="qresB"></div>
+      </div>
+    </div>
+    <div id="main"></div>
+  </div>
+</div>
+</html>
