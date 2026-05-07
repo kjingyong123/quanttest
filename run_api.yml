@@ -1,1 +1,31 @@
 
+name: Twelve Data Scheduler
+
+on:
+  schedule:
+    # Runs every hour, Monday through Friday (Market Hours)
+    # Cron format: Minute Hour Day Month DayOfWeek
+    - cron: '0 * * * 1-5'
+  workflow_dispatch: # Allows you to run it manually with one click
+
+jobs:
+  build-and-run:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Compile and Run
+        env:
+          # This pulls your API key from the "Secrets" we set up earlier
+          TWELVE_DATA_KEY: ${{ secrets.TWELVE_DATA_KEY }}
+        run: |
+          javac TwelveDataExample.java
+          java TwelveDataExample
