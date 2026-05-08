@@ -2,13 +2,29 @@ name: Scheduled Maven Build
 
 on:
   schedule:
-    # Runs every day at 2:00 AM UTC
+    # 2:00 AM UTC is roughly 10:00 PM EST (previous day)
     - cron: '0 2 * * *'
-  workflow_dispatch: # Allows manual trigger
+  workflow_dispatch: # Allows you to tap "Run workflow" on your phone for testing
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: Y
+          # Tip: In a real repo, use ${{ secrets.DB_PASSWORD }} instead of hardcoding
+          SA_PASSWORD: root
+        ports:
+          - 1433:1433
+        # Improved Health Check: Ensures SQL Server is truly ready before the job starts
+        options: >-
+          --health-cmd="/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P YourPassword123 -Q 'SELECT 1'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
 
     steps:
       - name: Checkout code
@@ -19,14 +35,27 @@ jobs:
         with:
           java-version: '21'
           distribution: 'temurin'
+          # NEW: Caches Maven dependencies so your build takes seconds, not minutes
+          cache: 'maven'
+
+      - name: Create Database
+        run: |
+          docker exec ${{ job.services.sqlserver.id }} /opt/mssql-tools/bin/sqlcmd \
+          -S localhost -U sa -P root \
+          -Q "CREATE DATABASE [originPAH_Local-18052022]"
 
       - name: Build with Maven
+        env:
+          # Match your application.properties exactly
+          SPRING_DATASOURCE_URL: jdbc:sqlserver://localhost:1433;databaseName=originPAH_Local-18052022;encrypt=true;trustServerCertificate=true
+          SPRING_DATASOURCE_USERNAME: sa
+          SPRING_DATASOURCE_PASSWORD: root
         run: mvn clean package
 
-      - name: Upload build artifacts
-        if: always()
+      - name: Upload Build Artifacts
+        if: always() # Uploads even if the tests fail so you can see why
         uses: actions/upload-artifact@v4
         with:
-          name: build-artifacts
-          path: target/
-          retention-days: 30
+          name: build-results
+          path: target/*.jar
+          retention-days: 7
