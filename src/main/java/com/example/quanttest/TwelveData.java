@@ -46,8 +46,14 @@ public class TwelveData implements CommandLineRunner {
                         StandardOpenOption.CREATE, 
                         StandardOpenOption.APPEND);
 
+            System.out.println("Task Complete. Shutting down...");
+                
+            // This tells Spring Boot to stop so the GitHub Action can finish
+            System.exit(0);
+
         } catch (Exception e) {
             System.err.println("Error occurred: " + e.getMessage());
+            System.exit(1); // Exit with error code if it fails
         }
     }
 }
