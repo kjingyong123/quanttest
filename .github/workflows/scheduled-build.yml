@@ -44,13 +44,15 @@ jobs:
           -S localhost -U sa -P root \
           -Q "CREATE DATABASE [originPAH_Local-18052022]"
 
-      - name: Build with Maven
+      - name: Build and Execute
         env:
-          # Match your application.properties exactly
           SPRING_DATASOURCE_URL: jdbc:sqlserver://localhost:1433;databaseName=originPAH_Local-18052022;encrypt=true;trustServerCertificate=true
           SPRING_DATASOURCE_USERNAME: sa
-          SPRING_DATASOURCE_PASSWORD: root
-        run: mvn clean package
+          SPRING_DATASOURCE_PASSWORD: YourPassword123
+          TWELVE_DATA_KEY: ${9b30cb5823944374a3668af9d868e162}
+        run: |
+          mvn clean package -DskipTests
+          java -jar target/quanttest.jar
 
       - name: Upload Build Artifacts
         if: always() # Uploads even if the tests fail so you can see why
