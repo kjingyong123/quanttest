@@ -1,10 +1,9 @@
-name: Scheduled Maven Build
+name: Twelve Data SQL Build
 
 on:
   schedule:
-    # 2:00 AM UTC is roughly 10:00 PM EST (previous day)
     - cron: '0 2 * * *'
-  workflow_dispatch: # Allows you to tap "Run workflow" on your phone for testing
+  workflow_dispatch:
 
 jobs:
   build:
@@ -15,11 +14,10 @@ jobs:
         image: mcr.microsoft.com/mssql/server:2022-latest
         env:
           ACCEPT_EULA: Y
-          # Tip: In a real repo, use ${{ secrets.DB_PASSWORD }} instead of hardcoding
-          SA_PASSWORD: root
+          # Strong password is mandatory for SQL 2022 to start
+          MSSQL_SA_PASSWORD: QuantPass_2026! 
         ports:
           - 1433:1433
-
 
     steps:
       - name: Checkout code
@@ -30,21 +28,39 @@ jobs:
         with:
           java-version: '21'
           distribution: 'temurin'
-          # NEW: Caches Maven dependencies so your build takes seconds, not minutes
           cache: 'maven'
-      - name: Build and Execute
+
+      - name: Wait for SQL Server
+        # This checks the port from outside the container
+        run: |
+          echo "Waiting for SQL Server to boot..."
+          until nc -z localhost 1433; do
+            echo "Port 1433 not ready yet..."
+            sleep 5
+          done
+          echo "Port 1433 is open! Giving SQL 15 more seconds to finish internal setup..."
+          sleep 15
+
+      - name: Create Database
+        run: |
+          docker exec ${{ job.services.sqlserver.id }} /opt/mssql-tools18/bin/sqlcmd \
+          -S localhost -U sa -P QuantPass_2026! -C \
+          -Q "CREATE DATABASE quantdb"
+
+      - name: Build and Run
         env:
-          SPRING_DATASOURCE_URL: jdbc:sqlserver://localhost:1433;databaseName=originPAH_Local-18052022;encrypt=true;trustServerCertificate=true
+          # Match these to your application.properties and the DB we just created
+          SPRING_DATASOURCE_URL: jdbc:sqlserver://localhost:1433;databaseName=quantdb;encrypt=true;trustServerCertificate=true
           SPRING_DATASOURCE_USERNAME: sa
-          SPRING_DATASOURCE_PASSWORD: YourPassword123
+          SPRING_DATASOURCE_PASSWORD: QuantPass_2026!
           TWELVE_DATA_KEY: ${9b30cb5823944374a3668af9d868e162}
         run: |
           mvn clean package -DskipTests
           java -jar target/quanttest.jar
 
-      - name: Save the Txt File
+      - name: Upload Txt Result
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: api-results-file
+          name: stock-data
           path: api_results.txt
-          retention-days: 7
