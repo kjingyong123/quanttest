@@ -53,7 +53,7 @@ jobs:
           SPRING_DATASOURCE_URL: jdbc:sqlserver://localhost:1433;databaseName=quantdb;encrypt=true;trustServerCertificate=true
           SPRING_DATASOURCE_USERNAME: sa
           SPRING_DATASOURCE_PASSWORD: QuantPass_2026!
-          TWELVE_DATA_KEY: ${9b30cb5823944374a3668af9d868e162}
+          TWELVE_DATA_KEY: ${{ secrets.TWELVE_DATA_KEY }}
         run: |
           mvn clean package -DskipTests
           java -jar target/quanttest.jar
